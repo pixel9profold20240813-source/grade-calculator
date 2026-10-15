@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>成績計算機</title>
+<style>
+:root{--bg:#eef1f7;--card:#fff;--ink:#1b2340;--sub:#6b7391;--line:#d9deec;--key:#f3f5fb;--keyp:#dfe5f6;--acc:#3a4de0;--accink:#fff;--hl:#ffd84d;--hlink:#3b2f00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10142a;--card:#1a2040;--ink:#eef1ff;--sub:#9aa3c7;--line:#2c3563;--key:#232b55;--keyp:#2f3a73;--acc:#7b8cff;--accink:#10142a;--hl:#ffd84d;--hlink:#3b2f00;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10142a;--card:#1a2040;--ink:#eef1ff;--sub:#9aa3c7;--line:#2c3563;--key:#232b55;--keyp:#2f3a73;--acc:#7b8cff;--accink:#10142a;--hl:#ffd84d;--hlink:#3b2f00;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif}
+.app{max-width:440px;margin:0 auto;padding:16px 16px 24px}
+h1{font-size:20px;margin:4px 0 12px;font-weight:800}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px}
+.chip{flex:1 0 auto;min-width:48px;border:2px solid var(--line);background:var(--card);color:var(--sub);border-radius:12px;padding:6px 4px;font:inherit;font-size:13px;font-weight:700;text-align:center;cursor:pointer}
+.chip b{display:block;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums;min-height:20px}
+.chip.on{border-color:var(--acc);color:var(--acc)}
+.chip.ok b{color:var(--acc)}
+.chip:disabled{opacity:.45;cursor:default}
+.card{background:var(--card);border-radius:22px;padding:18px;border:1px solid var(--line)}
+.sub{display:flex;align-items:center;justify-content:space-between}
+.sub h2{margin:0;font-size:34px;font-weight:800;letter-spacing:2px}
+.w{background:var(--hl);color:var(--hlink);font-weight:800;border-radius:999px;padding:6px 14px;font-size:15px}
+.disp{margin:14px 0 16px;border-bottom:3px solid var(--acc);padding:6px 2px;display:flex;align-items:baseline;justify-content:flex-end;gap:8px;min-height:84px}
+.disp span{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.disp span.ph{color:var(--line)}
+.disp i{font-style:normal;color:var(--sub);font-size:18px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.k{height:62px;border:0;border-radius:16px;background:var(--key);color:var(--ink);font:inherit;font-size:28px;font-weight:700;cursor:pointer;transition:transform .08s,background .08s;box-shadow:0 3px 0 var(--line)}
+.k:active{transform:translateY(3px);background:var(--keyp);box-shadow:none}
+.k.f{font-size:22px;color:var(--sub)}
+.go{width:100%;margin-top:12px;height:60px;border:0;border-radius:16px;background:var(--acc);color:var(--accink);font:inherit;font-size:20px;font-weight:800;cursor:pointer;transition:transform .08s,opacity .15s}
+.go:active{transform:scale(.98)}
+.go:disabled{opacity:.35;cursor:default}
+.big{background:var(--acc);color:var(--accink);border-radius:22px;padding:20px 18px}
+.big small{font-size:15px;opacity:.85;font-weight:600}
+.big div{font-size:56px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}
+.big em{font-style:normal;font-size:18px;opacity:.8;font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.st{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+.st small{color:var(--sub);font-size:14px;font-weight:600}
+.st div{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:10px 4px;text-align:right;border-bottom:1px solid var(--line);font-size:15px}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--sub);font-weight:600;font-size:13px}
+tr.row{cursor:pointer}
+tr.row:active{background:var(--key)}
+tr:last-child td{border-bottom:0}
+.hint{color:var(--sub);font-size:13px;margin:10px 2px 0;text-align:center}
+.ghost{width:100%;margin-top:12px;height:52px;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:16px;font:inherit;font-size:17px;font-weight:700;cursor:pointer}
+@keyframes slideIn{from{opacity:0;transform:translateX(var(--dx,40px))}to{opacity:1;transform:none}}
+.enter{animation:slideIn .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{0%{opacity:0;transform:scale(.85)}60%{transform:scale(1.04)}100%{opacity:1;transform:none}}
+.pop{animation:pop .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.up{opacity:0;animation:up .4s ease-out forwards}
+@media (prefers-reduced-motion:reduce){.enter,.pop,.up{animation:none;opacity:1}}
+@keyframes tIn{from{opacity:0;transform:translateX(calc(var(--dx,40px)*2.5))}}
+@keyframes wIn{from{opacity:0;transform:translateY(-36px) rotate(-14deg) scale(.5)}}
+@keyframes dIn{from{opacity:0;clip-path:inset(0 100% 0 0);transform:translateX(calc(var(--dx,40px)*-1))}to{clip-path:inset(0 0 0 0)}}
+@keyframes kIn{from{opacity:0;transform:translateY(46px) scale(.4) rotate(var(--r,8deg))}}
+@keyframes gIn{from{opacity:0;transform:translateY(70px) scaleX(.6)}}
+@keyframes out{to{opacity:0;transform:translateX(calc(var(--dx,40px)*-2)) scale(.7)}}
+.pt{animation-duration:.45s;animation-fill-mode:backwards;animation-timing-function:cubic-bezier(.2,.9,.3,1.25)}
+.pt.t1{animation-name:tIn}
+.pt.t2{animation-name:wIn;animation-delay:90ms}
+.pt.t3{animation-name:dIn;animation-delay:150ms;animation-timing-function:ease-out}
+.pt.k{animation-name:kIn;animation-delay:calc(200ms + var(--w,0)*45ms)}
+.pt.go{animation-name:gIn;animation-delay:480ms}
+.leave .pt{animation:out .2s ease-in forwards;animation-delay:calc(var(--w,0)*10ms)}
+.leave{pointer-events:none}
+@media (prefers-reduced-motion:reduce){.pt,.leave .pt{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>成績計算機</h1>
+  <div id="chips" class="chips"></div>
+  <div id="main"></div>
+</div>
+<script>
+var S=[["國文",4],["英文",4],["數學",4],["地理",2],["歷史",2],["地科",2],["化學",2]];
+var vals=S.map(function(){return ""});
+var cur=0,done=false,editing=false,dir=1,busy=false;
+function $(id){return document.getElementById(id)}
+function fmt(x){return String(Number(x.toFixed(2)))}
+function firstEmpty(){for(var i=0;i<S.length;i++){if(vals[i]==="")return i}return S.length}
+function valid(i){return vals[i]!==""&&vals[i].slice(-1)!=="."}
+
+function press(k){
+  if(done)return;
+  var v=vals[cur];
+  if(k==="b"){v=v.slice(0,-1)}
+  else if(k==="."){if(v.indexOf(".")>-1)return;v=v===""?"0.":v+"."}
+  else{
+    if(v==="0")v="";
+    var c=v+k;
+    if(Number(c)>100)return;
+    if(c.indexOf(".")>-1&&c.split(".")[1].length>2)return;
+    v=c;
+  }
+  vals[cur]=v;
+  renderDisp();
+}
+function swap(nd,fn){
+  if(busy)return;
+  var m=$("main"),c=m.querySelector(".card");
+  var rm=window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches;
+  if(!c||done||rm){fn();return}
+  busy=true;
+  c.style.setProperty("--dx",(nd*40)+"px");
+  m.classList.add("leave");
+  setTimeout(function(){busy=false;m.classList.remove("leave");fn()},260);
+}
+function next(){
+  if(!valid(cur))return;
+  if(editing){swap(1,function(){editing=false;done=true;render()});return}
+  if(cur<S.length-1){swap(1,function(){cur++;dir=1;render()})}
+  else{swap(1,function(){done=true;render()})}
+}
+function jump(i){if(!done&&i===cur)return;var nd=(!done&&i<cur)?-1:1;swap(nd,function(){dir=nd;done=false;editing=false;cur=i;render()})}
+function editFromResult(i){done=false;editing=true;cur=i;render()}
+function reset(){vals=S.map(function(){return ""});cur=0;done=false;editing=false;render()}
+
+function renderChips(){
+  var fe=firstEmpty(),h="";
+  for(var i=0;i<S.length;i++){
+    var cls="chip"+(i===cur&&!done?" on":"")+(valid(i)?" ok":"");
+    var dis=(!done&&i>fe&&!editing)||(done&&false)?" disabled":"";
+    h+='<button class="'+cls+'"'+(i>fe&&!done?" disabled":"")+' onclick="jump('+i+')">'+S[i][0]+'<b>'+(vals[i]===""?"":vals[i])+'</b></button>';
+  }
+  $("chips").innerHTML=h;
+}
+function renderDisp(){
+  var d=$("disp"),g=$("go");
+  if(!d)return;
+  var v=vals[cur];
+  d.innerHTML=v===""?'<span class="ph">0</span><i>分</i>':'<span>'+v+'</span><i>分</i>';
+  g.disabled=!valid(cur);
+  renderChips();
+}
+function runCount(){
+  var rm=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  document.querySelectorAll('.cu').forEach(function(el){
+    var t=Number(el.dataset.n),t0=null;
+    if(rm){el.textContent=fmt(t);return}
+    var f=function(ts){
+      if(t0===null)t0=ts;
+      var p=Math.min((ts-t0)/900,1),e=1-Math.pow(1-p,3);
+      el.textContent=p<1?fmt(t*e):fmt(t);
+      if(p<1)requestAnimationFrame(f);
+    };
+    requestAnimationFrame(f);
+  });
+}
+function render(){
+  renderChips();
+  var m=$("main");
+  if(done){
+    var sum=0,wt=0,wsum=0,wtot=0;
+    S.forEach(function(s,i){var n=Number(vals[i]);sum+=n;wt+=s[1];wtot+=n*s[1]});
+    var avg=sum/S.length,wavg=wtot/wt;
+    var rows=S.map(function(s,i){var n=Number(vals[i]);return '<tr class="row up" style="animation-delay:'+(0.4+i*0.06)+'s" onclick="editFromResult('+i+')"><td>'+s[0]+'</td><td>'+fmt(n)+'</td><td>×'+s[1]+'</td><td>'+fmt(n*s[1])+'</td></tr>'}).join("");
+    m.innerHTML='<div class="big pop"><small>加權總分（滿分 '+wt*100+'）</small><div class="cu" data-n="'+wtot+'">0</div></div>'+
+      '<div class="two"><div class="st up" style="animation-delay:.2s"><small>平均成績</small><div class="cu" data-n="'+avg+'">0</div></div><div class="st up" style="animation-delay:.3s"><small>加權平均</small><div class="cu" data-n="'+wavg+'">0</div></div></div>'+
+      '<div class="card" style="padding:8px 16px"><table><tr><th>科目</th><th>分數</th><th>加權數</th><th>加權分</th></tr>'+rows+'</table></div>'+
+      '<p class="hint up" style="animation-delay:.85s">點科目列可以修改分數</p><button class="ghost up" style="animation-delay:.9s" onclick="reset()">重新輸入</button>';
+    runCount();
+    return;
+  }
+  var keys=["1","2","3","4","5","6","7","8","9",".","0","b"];
+  var pad=keys.map(function(k,ix){return '<button style="--w:'+(Math.floor(ix/3)+ix%3)+';--r:'+(ix%2?8:-8)+'deg" class="pt k'+(k==="."||k==="b"?" f":"")+'" onclick="press(\''+k+'\')" aria-label="'+(k==="b"?"刪除":k)+'">'+(k==="b"?"⌫":k)+'</button>'}).join("");
+  var last=cur===S.length-1||editing;
+  m.innerHTML='<div class="card" style="--dx:'+(dir*40)+'px"><div class="sub"><h2 class="pt t1">'+S[cur][0]+'</h2><span class="w pt t2">加權數 '+S[cur][1]+'</span></div>'+
+    '<div id="disp" class="disp pt t3"></div><div class="pad">'+pad+'</div>'+
+    '<button id="go" class="go pt" onclick="next()">'+(last?"算結果":"下一科")+'</button></div>';
+  renderDisp();
+}
+document.addEventListener("keydown",function(e){
+  if(done)return;
+  if(/^[0-9.]$/.test(e.key))press(e.key);
+  else if(e.key==="Backspace")press("b");
+  else if(e.key==="Enter")next();
+});
+render();
+</script>
+</body>
+</html>
