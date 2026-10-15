@@ -91,19 +91,39 @@ tr:last-child td{border-bottom:0}
 .rw.me{background:var(--key);border-radius:12px}
 .sh .go,.sh .ghost{margin-top:12px}
 @media (prefers-reduced-motion:reduce){.ov,.sh{animation:none}}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic .cup{fill:var(--hl)}
+.top h1{margin:0}
+.trophy{color:var(--ink);display:grid;place-items:center}
+.back{display:flex;align-items:center;border:0;background:transparent;color:var(--sub);font:inherit;font-size:16px;font-weight:700;cursor:pointer;padding:8px 4px 8px 0}
+.home{min-height:64vh;display:grid;place-items:center}
+.start{width:220px;height:220px;border-radius:50%;border:0;background:var(--acc);color:var(--accink);font:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;box-shadow:0 10px 0 var(--keyp);transition:transform .1s,box-shadow .1s}
+.start:active{transform:translateY(8px);box-shadow:0 2px 0 var(--keyp)}
+.start .ic{width:68px;height:68px;stroke-width:1.6}
+.start b{font-size:28px}
+.start small{opacity:.8;font-size:15px}
+.fbk{position:fixed;left:calc(max(0px,(100vw - 440px)/2) + 16px);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:6px;height:44px;padding:0 14px;border:2px solid var(--line);background:var(--card);color:var(--sub);border-radius:14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+#ftxt{width:100%;height:120px;border:2px solid var(--line);border-radius:14px;background:var(--key);color:var(--ink);font:inherit;font-size:17px;padding:12px;resize:none}
+#ftxt:focus{outline:none;border-color:var(--acc)}
+.del{border:0;background:transparent;color:#e5484d;width:40px;height:40px;border-radius:10px;cursor:pointer;display:grid;place-items:center;flex:none}
+.ar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.an{flex:1;min-width:0;height:44px;border:2px solid var(--line);border-radius:12px;background:var(--key);color:var(--ink);font:inherit;font-size:17px;font-weight:700;padding:0 10px}
+.ar b{width:22px;text-align:center;font-size:18px}
+.st2{width:40px;height:40px;border:0;border-radius:12px;background:var(--key);color:var(--ink);font:inherit;font-size:22px;font-weight:800;cursor:pointer;flex:none}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="top"><h1>成績計算機</h1><button class="trophy" onclick="showBoard()" aria-label="排行榜">🏆</button></div>
+  <div class="top"><div id="tl"></div><button class="trophy" id="tr" onclick="showBoard()" aria-label="排行榜"></button></div>
   <div id="chips" class="chips"></div>
   <div id="main"></div>
   <div id="sheet"></div>
+  <button id="fb" class="fbk" onclick="openFb()"></button>
 </div>
 <script>
 var S=[["國文",4],["英文",4],["數學",4],["地理",2],["歷史",2],["地科",2],["化學",2]];
 var vals=S.map(function(){return ""});
-var cur=0,done=false,editing=false,dir=1,busy=false,last=null,me='';
+var cur=0,done=false,editing=false,dir=1,busy=false,last=null,me='',home=true,adm=false;
 function $(id){return document.getElementById(id)}
 function fmt(x){return String(Number(x.toFixed(2)))}
 function firstEmpty(){for(var i=0;i<S.length;i++){if(vals[i]==="")return i}return S.length}
@@ -161,10 +181,110 @@ async function showBoard(){
   try{
     var r=await fetch(base()+':runQuery?key='+FB.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'scores'}],orderBy:[{field:{fieldPath:'total'},direction:'DESCENDING'}],limit:50}})});
     if(!r.ok)throw new Error(r.status);
-    var rows=(await r.json()).filter(function(x){return x.document});
+    var rows=(await r.json()).filter(function(x){return x.document});rowsCache=rows;
     if(!rows.length){L.innerHTML='<p class="mu">還沒有人上榜，你可以是第一個</p>';return}
-    L.innerHTML=rows.map(function(x,i){var f=x.document.fields,n=f.nick.stringValue;return '<div class="rw'+(n===me?' me':'')+'"><b>'+(i+1)+'</b><span>'+esc(n)+'</span><em>'+fmt(num(f.total))+'</em></div>'}).join('');
+    L.innerHTML=rows.map(function(x,i){var f=x.document.fields,n=f.nick.stringValue;return '<div class="rw'+(n===me?' me':'')+'"><b>'+(i+1)+'</b><span>'+esc(n)+'</span><em>'+fmt(num(f.total))+'</em>'+(adm?'<button class="del" onclick="delRow('+i+')" aria-label="刪除">'+IC.trash+'</button>':'')+'</div>'}).join('');
   }catch(e){L.innerHTML='<p class="mu">讀取失敗，請稍後再試</p>'}
+}
+var IC={
+  trophy:'<svg class="ic" viewBox="0 0 24 24"><path class="cup" d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 14v6M8 20h8"/></svg>',
+  msg:'<svg class="ic" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/><path d="M8 10h8M8 13h5"/></svg>',
+  back:'<svg class="ic" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  trash:'<svg class="ic" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13M10 11v6M14 11v6"/></svg>',
+  calc:'<svg class="ic" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M8 7h8v3H8zM8 14h2M12 14h4M8 17.5h2M12 17.5h4"/></svg>'
+};
+var ADMIN='pixel9profold20240813@gmail.com',auth=null,draft=[],rowsCache=[],CT={'Content-Type':'application/json'};
+function loadJs(s){return new Promise(function(ok,no){var e=document.createElement('script');e.src=s;e.onload=ok;e.onerror=no;document.head.appendChild(e)})}
+async function loadCfg(){
+  if(!ready())return;
+  try{
+    var r=await fetch(base()+'/config/subjects?key='+FB.apiKey);
+    if(!r.ok)return;
+    var l=JSON.parse((await r.json()).fields.list.stringValue);
+    if(Array.isArray(l)&&l.length&&l.every(function(x){return x.n&&x.w>0})){S=l.map(function(x){return [String(x.n),Number(x.w)]});if(home)render()}
+  }catch(e){}
+}
+function start(){vals=S.map(function(){return ''});cur=0;done=false;editing=false;dir=1;home=false;render()}
+function goHome(){closeSheet();swap(1,function(){home=true;done=false;editing=false;render()})}
+function openFb(){sheet('<h3>問題反饋</h3><p class="mu">遇到問題或有建議，都可以寫在這裡</p><textarea id="ftxt" maxlength="500" placeholder="請描述問題…"></textarea><div id="msg" class="msg"></div><button class="go" onclick="sendFb()">送出</button><button class="ghost" onclick="closeSheet()">取消</button>')}
+async function sendFb(){
+  var t=$('ftxt').value.trim();
+  if(!t){msg('請先輸入內容');return}
+  if(t.toLowerCase()==='admin'){adminLogin();return}
+  if(!ready()){msg('尚未設定資料庫');return}
+  msg('送出中…');
+  try{
+    var r=await fetch(base()+'/feedback?key='+FB.apiKey,{method:'POST',headers:CT,body:JSON.stringify({fields:{text:{stringValue:t},t:{stringValue:new Date().toISOString()}}})});
+    if(!r.ok)throw 0;
+    msg('已送出，謝謝你的回饋');setTimeout(closeSheet,1200);
+  }catch(e){msg('送出失敗，請稍後再試')}
+}
+async function adminLogin(){
+  msg('登入中…');
+  try{
+    if(!auth){
+      await loadJs('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+      await loadJs('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js');
+      firebase.initializeApp({apiKey:FB.apiKey,authDomain:FB.projectId+'.firebaseapp.com',projectId:FB.projectId});
+      auth=firebase.auth();
+    }
+    var u=auth.currentUser;
+    if(!u){u=(await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())).user}
+    if(u.email!==ADMIN||!u.emailVerified){await auth.signOut();msg('這個帳號沒有管理員權限');return}
+    adm=true;draft=S.map(function(s){return {n:s[0],w:s[1]}});drawAdmin();
+  }catch(e){msg('登入失敗：'+((e&&e.code)||'請稍後再試'))}
+}
+async function af(u,o){
+  o=o||{};var t=await auth.currentUser.getIdToken();
+  o.headers=Object.assign({'Authorization':'Bearer '+t},o.headers||{});
+  return fetch(u,o);
+}
+function drawAdmin(){
+  sheet('<h3>管理員模式</h3><p class="mu">'+esc(auth.currentUser.email)+'</p><p class="mu" style="margin:0 0 8px"><b>科目與加權數</b></p>'+
+    draft.map(function(d,i){return '<div class="ar"><input class="an" value="'+esc(d.n)+'" maxlength="6" oninput="draft['+i+'].n=this.value"><button class="st2" onclick="wStep('+i+',-1)">−</button><b>'+d.w+'</b><button class="st2" onclick="wStep('+i+',1)">+</button><button class="del" onclick="dRem('+i+')" aria-label="刪除科目">'+IC.trash+'</button></div>'}).join('')+
+    '<button class="ghost" onclick="dAdd()">新增科目</button><div id="msg" class="msg"></div><button class="go" onclick="saveCfg()">儲存科目設定</button><button class="ghost" onclick="viewFb()">查看反饋</button><button class="ghost" onclick="resetBoard()">重製排行榜</button><button class="ghost" onclick="adminOut()">登出並關閉</button>');
+}
+function wStep(i,d){draft[i].w=Math.max(1,Math.min(10,draft[i].w+d));drawAdmin()}
+function dAdd(){if(draft.length>=12)return;draft.push({n:'新科目',w:1});drawAdmin()}
+function dRem(i){if(draft.length<=1)return;draft.splice(i,1);drawAdmin()}
+async function saveCfg(){
+  var l=[];
+  for(var i=0;i<draft.length;i++){var n=draft[i].n.trim();if(!n){msg('科目名稱不能空白');return}l.push({n:n,w:draft[i].w})}
+  msg('儲存中…');
+  try{
+    var r=await af(base()+'/config/subjects',{method:'PATCH',headers:CT,body:JSON.stringify({fields:{list:{stringValue:JSON.stringify(l)}}})});
+    if(!r.ok)throw 0;
+    S=l.map(function(x){return [x.n,x.w]});msg('已儲存，同學重新開啟網頁就會更新');
+  }catch(e){msg('儲存失敗，請確認規則已更新')}
+}
+async function resetBoard(){
+  if(!confirm('確定要清空整個排行榜？無法復原'))return;
+  msg('清除中…');
+  try{
+    for(var k=0;k<20;k++){
+      var r=await af(base()+':runQuery',{method:'POST',headers:CT,body:JSON.stringify({structuredQuery:{from:[{collectionId:'scores'}],limit:300}})});
+      var rows=(await r.json()).filter(function(x){return x.document});
+      if(!rows.length)break;
+      var w=await af(base()+':batchWrite',{method:'POST',headers:CT,body:JSON.stringify({writes:rows.map(function(x){return {delete:x.document.name}})})});
+      if(!w.ok)throw 0;
+    }
+    msg('排行榜已清空');
+  }catch(e){msg('清除失敗，請確認規則已更新')}
+}
+async function viewFb(){
+  sheet('<h3>問題反饋</h3><div id="list"><p class="mu">載入中…</p></div><button class="ghost" onclick="drawAdmin()">返回</button>');
+  try{
+    var r=await af(base()+':runQuery',{method:'POST',headers:CT,body:JSON.stringify({structuredQuery:{from:[{collectionId:'feedback'}],limit:50}})});
+    var rows=(await r.json()).filter(function(x){return x.document});
+    $('list').innerHTML=rows.length?rows.map(function(x){return '<div class="rw"><span style="white-space:normal">'+esc(x.document.fields.text.stringValue)+'</span></div>'}).join(''):'<p class="mu">目前沒有反饋</p>';
+  }catch(e){$('list').innerHTML='<p class="mu">讀取失敗</p>'}
+}
+async function adminOut(){try{await auth.signOut()}catch(e){}adm=false;closeSheet()}
+async function delRow(i){
+  var x=rowsCache[i];
+  if(!x||!confirm('刪除「'+x.document.fields.nick.stringValue+'」的紀錄？'))return;
+  try{await af(base()+'/scores/'+x.document.name.split('/').pop(),{method:'DELETE'})}catch(e){}
+  showBoard();
 }
 function swap(nd,fn){
   if(busy)return;
@@ -218,6 +338,9 @@ function runCount(){
   });
 }
 function render(){
+  $('tl').innerHTML=home?'<h1>成績計算機</h1>':'<button class="back" onclick="goHome()">'+IC.back+'首頁</button>';
+  $('fb').style.display=home?'':'none';
+  if(home){$('chips').innerHTML='';$('main').innerHTML='<div class="home"><button class="start pop" onclick="start()">'+IC.calc+'<b>輸入成績</b><small>共 '+S.length+' 科</small></button></div>';return}
   renderChips();
   var m=$("main");
   if(done){
@@ -242,12 +365,13 @@ function render(){
   renderDisp();
 }
 document.addEventListener("keydown",function(e){
-  if(done||$("sheet").firstChild||e.target.tagName==="INPUT")return;
+  if(home||done||$("sheet").firstChild||e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;
   if(/^[0-9.]$/.test(e.key))press(e.key);
   else if(e.key==="Backspace")press("b");
   else if(e.key==="Enter")next();
 });
-render();
+$('tr').innerHTML=IC.trophy;$('fb').innerHTML=IC.msg+'問題反饋';
+render();loadCfg();
 </script>
 </body>
 </html>
