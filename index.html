@@ -211,13 +211,17 @@ async function sendFb(){
   var t=$('ftxt').value.trim();
   if(!t){msg('請先輸入內容');return}
   if(t.toLowerCase()==='admin'){adminLogin();return}
-  if(!ready()){msg('尚未設定資料庫');return}
   msg('送出中…');
+  var ok=false;
   try{
-    var r=await fetch(base()+'/feedback?key='+FB.apiKey,{method:'POST',headers:CT,body:JSON.stringify({fields:{text:{stringValue:t},t:{stringValue:new Date().toISOString()}}})});
-    if(!r.ok)throw 0;
-    msg('已送出，謝謝你的回饋');setTimeout(closeSheet,1200);
-  }catch(e){msg('送出失敗，請稍後再試')}
+    var m=await fetch('https://formsubmit.co/ajax/'+ADMIN,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({message:t,_subject:'成績計算機問題反饋',_template:'table'})});
+    ok=m.ok;
+  }catch(e){}
+  try{
+    if(ready()){var r=await fetch(base()+'/feedback?key='+FB.apiKey,{method:'POST',headers:CT,body:JSON.stringify({fields:{text:{stringValue:t},t:{stringValue:new Date().toISOString()}}})});ok=ok||r.ok}
+  }catch(e){}
+  if(ok){msg('已送出，謝謝你的回饋');setTimeout(closeSheet,1200)}
+  else msg('送出失敗，請稍後再試');
 }
 async function adminLogin(){
   msg('登入中…');
