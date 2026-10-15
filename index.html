@@ -72,18 +72,38 @@ tr:last-child td{border-bottom:0}
 .leave .pt{animation:out .2s ease-in forwards;animation-delay:calc(var(--w,0)*10ms)}
 .leave{pointer-events:none}
 @media (prefers-reduced-motion:reduce){.pt,.leave .pt{animation:none!important}}
+.top{display:flex;align-items:center;justify-content:space-between}
+.trophy{border:2px solid var(--line);background:var(--card);border-radius:14px;width:44px;height:44px;font-size:22px;cursor:pointer}
+.ov{position:fixed;inset:0;background:rgba(10,14,40,.5);display:flex;align-items:flex-end;justify-content:center;z-index:9;animation:fade .2s}
+.sh{width:100%;max-width:440px;background:var(--card);border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));max-height:85%;overflow-y:auto;animation:rise .3s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{transform:translateY(100%)}}
+.sh h3{margin:0 0 6px;font-size:22px}
+.mu{color:var(--sub);margin:0 0 12px;font-size:15px}
+#nick{width:100%;height:56px;border:2px solid var(--line);border-radius:14px;background:var(--key);color:var(--ink);font:inherit;font-size:20px;font-weight:700;padding:0 14px}
+#nick:focus{outline:none;border-color:var(--acc)}
+.msg{min-height:22px;margin:8px 2px 0;color:var(--sub);font-size:14px}
+.rw{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--line)}
+.rw b{width:32px;height:32px;border-radius:50%;background:var(--key);display:grid;place-items:center;font-size:15px;font-variant-numeric:tabular-nums}
+.rw:nth-child(-n+3) b{background:var(--hl);color:var(--hlink)}
+.rw span{flex:1;font-weight:700;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rw em{font-style:normal;font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}
+.rw.me{background:var(--key);border-radius:12px}
+.sh .go,.sh .ghost{margin-top:12px}
+@media (prefers-reduced-motion:reduce){.ov,.sh{animation:none}}
 </style>
 </head>
 <body>
 <div class="app">
-  <h1>成績計算機</h1>
+  <div class="top"><h1>成績計算機</h1><button class="trophy" onclick="showBoard()" aria-label="排行榜">🏆</button></div>
   <div id="chips" class="chips"></div>
   <div id="main"></div>
+  <div id="sheet"></div>
 </div>
 <script>
 var S=[["國文",4],["英文",4],["數學",4],["地理",2],["歷史",2],["地科",2],["化學",2]];
 var vals=S.map(function(){return ""});
-var cur=0,done=false,editing=false,dir=1,busy=false;
+var cur=0,done=false,editing=false,dir=1,busy=false,last=null,me='';
 function $(id){return document.getElementById(id)}
 function fmt(x){return String(Number(x.toFixed(2)))}
 function firstEmpty(){for(var i=0;i<S.length;i++){if(vals[i]==="")return i}return S.length}
@@ -103,6 +123,48 @@ function press(k){
   }
   vals[cur]=v;
   renderDisp();
+}
+var FB={apiKey:'',projectId:''};
+function ready(){return !!(FB.apiKey&&FB.projectId)}
+function base(){return 'https://firestore.googleapis.com/v1/projects/'+FB.projectId+'/databases/(default)/documents'}
+function nid(n){return encodeURIComponent('n_'+n.replace(/\//g,'／'))}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function num(v){return Number(v.doubleValue!==undefined?v.doubleValue:v.integerValue)}
+function sheet(h){$('sheet').innerHTML='<div class="ov" onclick="if(event.target===this)closeSheet()"><div class="sh">'+h+'</div></div>'}
+function closeSheet(){$('sheet').innerHTML=''}
+function msg(t){var m=$('msg');if(m)m.textContent=t}
+function openJoin(){
+  var nk='';try{nk=localStorage.getItem('gc_nick')||''}catch(e){}
+  sheet('<h3>加入排行榜</h3><p class="mu">加權總分 '+fmt(last.total)+'。輸入暱稱或座號：</p><input id="nick" maxlength="10" value="'+esc(nk)+'" placeholder="例如：小明、12號"><div id="msg" class="msg"></div><button id="sub" class="go" onclick="submit()">送出</button><button class="ghost" onclick="closeSheet()">不用了</button>');
+}
+async function submit(){
+  var n=$('nick').value.trim();
+  if(!n){msg('請輸入暱稱或座號');return}
+  if(!ready()){msg('排行榜還沒設定好');return}
+  try{localStorage.setItem('gc_nick',n)}catch(e){}
+  $('sub').disabled=true;msg('送出中…');
+  var u=base()+'/scores/'+nid(n)+'?key='+FB.apiKey;
+  try{
+    var g=await fetch(u);
+    if(g.ok){var d=await g.json(),old=num(d.fields.total);
+      if(old>=last.total){me=n;msg('「'+n+'」已有 '+fmt(old)+' 分的紀錄，沒有更新');setTimeout(showBoard,1500);return}}
+    var b={fields:{nick:{stringValue:n},total:{doubleValue:last.total},avg:{doubleValue:last.avg},wavg:{doubleValue:last.wavg}}};
+    var r=await fetch(u,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+    if(!r.ok)throw new Error(r.status);
+    me=n;showBoard();
+  }catch(e){msg('送出失敗，請稍後再試');var s=$('sub');if(s)s.disabled=false}
+}
+async function showBoard(){
+  sheet('<h3>排行榜</h3><p class="mu">依加權總分排名</p><div id="list"><p class="mu">載入中…</p></div><button class="go" onclick="showBoard()">重新整理</button><button class="ghost" onclick="closeSheet()">關閉</button>');
+  var L=$('list');
+  if(!ready()){L.innerHTML='<p class="mu">還沒設定雲端資料庫</p>';return}
+  try{
+    var r=await fetch(base()+':runQuery?key='+FB.apiKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'scores'}],orderBy:[{field:{fieldPath:'total'},direction:'DESCENDING'}],limit:50}})});
+    if(!r.ok)throw new Error(r.status);
+    var rows=(await r.json()).filter(function(x){return x.document});
+    if(!rows.length){L.innerHTML='<p class="mu">還沒有人上榜，你可以是第一個</p>';return}
+    L.innerHTML=rows.map(function(x,i){var f=x.document.fields,n=f.nick.stringValue;return '<div class="rw'+(n===me?' me':'')+'"><b>'+(i+1)+'</b><span>'+esc(n)+'</span><em>'+fmt(num(f.total))+'</em></div>'}).join('');
+  }catch(e){L.innerHTML='<p class="mu">讀取失敗，請稍後再試</p>'}
 }
 function swap(nd,fn){
   if(busy)return;
@@ -162,11 +224,12 @@ function render(){
     var sum=0,wt=0,wsum=0,wtot=0;
     S.forEach(function(s,i){var n=Number(vals[i]);sum+=n;wt+=s[1];wtot+=n*s[1]});
     var avg=sum/S.length,wavg=wtot/wt;
+    last={total:wtot,avg:avg,wavg:wavg};
     var rows=S.map(function(s,i){var n=Number(vals[i]);return '<tr class="row up" style="animation-delay:'+(0.4+i*0.06)+'s" onclick="editFromResult('+i+')"><td>'+s[0]+'</td><td>'+fmt(n)+'</td><td>×'+s[1]+'</td><td>'+fmt(n*s[1])+'</td></tr>'}).join("");
     m.innerHTML='<div class="big pop"><small>加權總分（滿分 '+wt*100+'）</small><div class="cu" data-n="'+wtot+'">0</div></div>'+
       '<div class="two"><div class="st up" style="animation-delay:.2s"><small>平均成績</small><div class="cu" data-n="'+avg+'">0</div></div><div class="st up" style="animation-delay:.3s"><small>加權平均</small><div class="cu" data-n="'+wavg+'">0</div></div></div>'+
       '<div class="card" style="padding:8px 16px"><table><tr><th>科目</th><th>分數</th><th>加權數</th><th>加權分</th></tr>'+rows+'</table></div>'+
-      '<p class="hint up" style="animation-delay:.85s">點科目列可以修改分數</p><button class="ghost up" style="animation-delay:.9s" onclick="reset()">重新輸入</button>';
+      '<button class="go up" style="animation-delay:.85s" onclick="openJoin()">加入排行榜</button><p class="hint up" style="animation-delay:.9s">點科目列可以修改分數</p><button class="ghost up" style="animation-delay:.95s" onclick="reset()">重新輸入</button>';
     runCount();
     return;
   }
@@ -179,7 +242,7 @@ function render(){
   renderDisp();
 }
 document.addEventListener("keydown",function(e){
-  if(done)return;
+  if(done||$("sheet").firstChild||e.target.tagName==="INPUT")return;
   if(/^[0-9.]$/.test(e.key))press(e.key);
   else if(e.key==="Backspace")press("b");
   else if(e.key==="Enter")next();
