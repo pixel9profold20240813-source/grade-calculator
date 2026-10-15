@@ -235,10 +235,10 @@ function render(){
   }
   var keys=["1","2","3","4","5","6","7","8","9",".","0","b"];
   var pad=keys.map(function(k,ix){return '<button style="--w:'+(Math.floor(ix/3)+ix%3)+';--r:'+(ix%2?8:-8)+'deg" class="pt k'+(k==="."||k==="b"?" f":"")+'" onclick="press(\''+k+'\')" aria-label="'+(k==="b"?"刪除":k)+'">'+(k==="b"?"⌫":k)+'</button>'}).join("");
-  var last=cur===S.length-1||editing;
+  var isLast=cur===S.length-1||editing;
   m.innerHTML='<div class="card" style="--dx:'+(dir*40)+'px"><div class="sub"><h2 class="pt t1">'+S[cur][0]+'</h2><span class="w pt t2">加權數 '+S[cur][1]+'</span></div>'+
     '<div id="disp" class="disp pt t3"></div><div class="pad">'+pad+'</div>'+
-    '<button id="go" class="go pt" onclick="next()">'+(last?"算結果":"下一科")+'</button></div>';
+    '<button id="go" class="go pt" onclick="next()">'+(isLast?"算結果":"下一科")+'</button></div>';
   renderDisp();
 }
 document.addEventListener("keydown",function(e){
